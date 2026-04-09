@@ -1,7 +1,7 @@
 version: v2
 modules:
   - path: .
-    name: buf.build/alan-is-buf/protoc-gen-gorm
+    name: infoblox.com/infobloxopen/protoc-gen-gorm
     lint:
       use:
         - STANDARD
