@@ -98,6 +98,25 @@ var optionalTypes = map[string]string{
 	"bool":    "*bool",
 }
 
+// https://gorm.io/docs/models.html#Field-Level-Permission
+var readPermissions = map[gormopts.ReadPermission]string{
+	gormopts.ReadPermission_READ_PERMISSION_BASIC: "->",
+	gormopts.ReadPermission_READ_PERMISSION_FALSE: "->:false",
+}
+
+var writePermissions = map[gormopts.WritePermission]string{
+	gormopts.WritePermission_WRITE_PERMISSION_BASIC:  "<-",
+	gormopts.WritePermission_WRITE_PERMISSION_CREATE: "<-:create",
+	gormopts.WritePermission_WRITE_PERMISSION_UPDATE: "<-:update",
+	gormopts.WritePermission_WRITE_PERMISSION_FALSE:  "<-:false",
+}
+
+var ignorePermissions = map[gormopts.IgnorePermission]string{
+	gormopts.IgnorePermission_IGNORE_PERMISSION_BASIC:     "-",
+	gormopts.IgnorePermission_IGNORE_PERMISSION_ALL:       "-:all",
+	gormopts.IgnorePermission_IGNORE_PERMISSION_MIGRATION: "-:migration",
+}
+
 type pkFieldObjs struct {
 	name  string
 	field *Field
@@ -1299,6 +1318,22 @@ func (b *ORMBuilder) renderGormTag(field *Field) string {
 	}
 	if tag.GetIgnore() {
 		gormRes += "-;"
+	}
+
+	if tag.GetReadPermission() != gormopts.ReadPermission_READ_PERMISSION_UNSPECIFIED {
+		gormRes += fmt.Sprintf("%s;", readPermissions[tag.GetReadPermission()])
+	}
+
+	if tag.GetWritePermission() != gormopts.WritePermission_WRITE_PERMISSION_UNSPECIFIED {
+		gormRes += fmt.Sprintf("%s;", writePermissions[tag.GetWritePermission()])
+	}
+
+	if !tag.GetIgnore() && tag.GetIgnorePermission() != gormopts.IgnorePermission_IGNORE_PERMISSION_UNSPECIFIED {
+		gormRes += fmt.Sprintf("%s;", ignorePermissions[tag.GetIgnorePermission()])
+	}
+
+	if len(tag.Extra) > 0 {
+		gormRes += fmt.Sprintf("%s;", tag.GetExtra())
 	}
 
 	if len(tag.GetSerializer()) > 0 {
