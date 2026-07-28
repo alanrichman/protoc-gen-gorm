@@ -551,6 +551,8 @@ func (b *ORMBuilder) parseAssociations(msg *protogen.Message, g *protogen.Genera
 			} else {
 				if fieldOpts.GetBelongsTo() != nil {
 					b.parseBelongsTo(msg, ormable, fieldName, fieldTypeShort, assocOrmable, fieldOpts)
+				} else if b.isBelongsTo(ormable, fieldName, fieldTypeShort, fieldOpts) {
+					b.parseBelongsTo(msg, ormable, fieldName, fieldTypeShort, assocOrmable, fieldOpts)
 				} else {
 					b.parseHasOne(msg, ormable, fieldName, fieldTypeShort, assocOrmable, fieldOpts)
 				}
@@ -563,6 +565,21 @@ func (b *ORMBuilder) parseAssociations(msg *protogen.Message, g *protogen.Genera
 			ormable.Fields[fieldName] = &Field{TypeName: fieldType, GormFieldOptions: fieldOpts, Type: assocOrmable, FieldAssociationInfo: fInfo}
 		}
 	}
+}
+
+// isBelongsTo reports whether ormable already has a FK field indicating the FK
+// lives on this side of the relationship (belongs-to). It checks three sources:
+//  1. An explicit foreignkey on the GormTag (e.g. tag = {foreignkey: "approver_group_id"})
+//  2. "{fieldType}Id" convention (one reference to this type on the message)
+//  3. "{fieldName}Id" convention (multiple references to the same type, disambiguated by field name)
+func (b *ORMBuilder) isBelongsTo(ormable *OrmableType, fieldName, fieldType string, fieldOpts *gormopts.GormFieldOptions) bool {
+	if fk := camelCase(fieldOpts.GetTag().GetForeignkey()); fk != "" {
+		_, ok := ormable.Fields[fk]
+		return ok
+	}
+	_, byType := ormable.Fields[fieldType+"Id"]
+	_, byName := ormable.Fields[fieldName+"Id"]
+	return byType || byName
 }
 
 func (b *ORMBuilder) hasPrimaryKey(ormable *OrmableType) bool {
@@ -803,10 +820,12 @@ func (b *ORMBuilder) parseHasMany(msg *protogen.Message, parent *OrmableType, fi
 	foreignKey := &Field{TypeName: foreignKeyType, Package: assocKey.Package, GormFieldOptions: &gormopts.GormFieldOptions{Tag: hasMany.GetForeignkeyTag()}}
 	var foreignKeyName string
 	if foreignKeyName = hasMany.GetForeignkey(); foreignKeyName == "" {
-		if b.countHasAssociationDimension(msg, fieldType) == 1 {
-			foreignKeyName = fmt.Sprintf(typeName + assocKeyName)
-		} else {
-			foreignKeyName = fmt.Sprintf(fieldName + typeName + assocKeyName)
+		if foreignKeyName = camelCase(opts.GetTag().GetForeignkey()); foreignKeyName == "" {
+			if b.countHasAssociationDimension(msg, fieldType) == 1 {
+				foreignKeyName = fmt.Sprintf(typeName + assocKeyName)
+			} else {
+				foreignKeyName = fmt.Sprintf(fieldName + typeName + assocKeyName)
+			}
 		}
 	}
 	hasMany.Foreignkey = foreignKeyName
@@ -872,10 +891,12 @@ func (b *ORMBuilder) parseBelongsTo(msg *protogen.Message, child *OrmableType, f
 	foreignKey := &Field{TypeName: foreignKeyType, Package: assocKey.Package, GormFieldOptions: &gormopts.GormFieldOptions{Tag: belongsTo.GetForeignkeyTag()}}
 	var foreignKeyName string
 	if foreignKeyName = camelCase(belongsTo.GetForeignkey()); foreignKeyName == "" {
-		if b.countBelongsToAssociationDimension(msg, fieldType) == 1 {
-			foreignKeyName = fmt.Sprintf(fieldType + assocKeyName)
-		} else {
-			foreignKeyName = fmt.Sprintf(fieldName + assocKeyName)
+		if foreignKeyName = camelCase(opts.GetTag().GetForeignkey()); foreignKeyName == "" {
+			if b.countBelongsToAssociationDimension(msg, fieldType) == 1 {
+				foreignKeyName = fmt.Sprintf(fieldType + assocKeyName)
+			} else {
+				foreignKeyName = fmt.Sprintf(fieldName + assocKeyName)
+			}
 		}
 	}
 	belongsTo.Foreignkey = foreignKeyName
