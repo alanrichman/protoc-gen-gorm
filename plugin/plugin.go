@@ -830,6 +830,14 @@ func (b *ORMBuilder) parseHasMany(msg *protogen.Message, parent *OrmableType, fi
 			}
 		}
 	}
+	// Polymorphic associations join via polymorphic_id/polymorphic_type columns on the child —
+	// no conventional FK field should be injected. We also force Replace mode so the handler
+	// generator uses db.Association().Replace() instead of removeChildAssociationsByName, which
+	// requires a FK field on child.Fields that doesn't exist for polymorphic associations.
+	if opts.GetTag().GetPolymorphicId() != "" {
+		hasMany.Replace = true
+		return
+	}
 	hasMany.Foreignkey = foreignKeyName
 	if _, ok := child.Fields[foreignKeyName]; child.Package != parent.Package && !ok {
 		panic(fmt.Sprintf("Object %s from package %s cannot be user for has-many in %s since it does not have FK field %s defined. Manually define the key, or switch to many-to-many.",
