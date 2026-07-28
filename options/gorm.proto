@@ -82,6 +82,9 @@ message GormTag {
   ReadPermission read_permission = 25;
   WritePermission write_permission = 26;
   IgnorePermission ignore_permission = 27;
+  string polymorphic_id = 28;
+  string polymorphic_type = 29;
+  string polymorphic_value = 30;
 
   string extra = 100;
 }

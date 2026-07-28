@@ -1355,6 +1355,18 @@ func (b *ORMBuilder) renderGormTag(field *Field) string {
 		gormRes += fmt.Sprintf("%s;", ignorePermissions[tag.GetIgnorePermission()])
 	}
 
+	if tag.GetPolymorphicId() != "" {
+		gormRes += fmt.Sprintf("polymorphicId:%s;", camelCase(tag.GetPolymorphicId()))
+	}
+
+	if tag.GetPolymorphicType() != "" {
+		gormRes += fmt.Sprintf("polymorphicType:%s;", camelCase(tag.GetPolymorphicType()))
+	}
+
+	if tag.GetPolymorphicValue() != "" {
+		gormRes += fmt.Sprintf("polymorphicValue:%s;", tag.GetPolymorphicValue())
+	}
+
 	if len(tag.Extra) > 0 {
 		gormRes += fmt.Sprintf("%s;", tag.GetExtra())
 	}
