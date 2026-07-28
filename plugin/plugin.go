@@ -542,7 +542,7 @@ func (b *ORMBuilder) parseAssociations(msg *protogen.Message, g *protogen.Genera
 			}
 
 			if field.Desc.Cardinality() == protoreflect.Repeated {
-				if fieldOpts.GetManyToMany() != nil {
+				if fieldOpts.GetManyToMany() != nil || fieldOpts.GetTag().GetManyToMany() != "" {
 					b.parseManyToMany(msg, ormable, fieldName, fieldTypeShort, assocOrmable, fieldOpts)
 				} else {
 					b.parseHasMany(msg, ormable, fieldName, fieldTypeShort, assocOrmable, fieldOpts)
@@ -702,10 +702,12 @@ func (b *ORMBuilder) parseManyToMany(msg *protogen.Message, ormable *OrmableType
 	ns := gschema.NamingStrategy{SingularTable: true}
 	var jt string
 	if jt = ns.TableName(mtm.GetJointable()); jt == "" {
-		if b.countManyToManyAssociationDimension(msg, fieldType) == 1 && typeName != fieldType {
-			jt = ns.TableName(typeName + inflection.Plural(fieldType))
-		} else {
-			jt = ns.TableName(typeName + inflection.Plural(fieldName))
+		if jt = opts.GetTag().GetManyToMany(); jt == "" {
+			if b.countManyToManyAssociationDimension(msg, fieldType) == 1 && typeName != fieldType {
+				jt = ns.TableName(typeName + inflection.Plural(fieldType))
+			} else {
+				jt = ns.TableName(typeName + inflection.Plural(fieldName))
+			}
 		}
 	}
 	mtm.Jointable = jt
@@ -3944,7 +3946,7 @@ func (b *ORMBuilder) countManyToManyAssociationDimension(message *protogen.Messa
 			fieldType = string(field.Desc.Message().Name())
 		}
 
-		if fieldOpts.GetManyToMany() != nil {
+		if fieldOpts.GetManyToMany() != nil || fieldOpts.GetTag().GetManyToMany() != "" {
 			if strings.Trim(typeName, "[]*") == strings.Trim(fieldType, "[]*") {
 				dim++
 			}
